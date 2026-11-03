@@ -16,7 +16,15 @@ stage = P(tempfile.mkdtemp(prefix="install-stage-", dir=artifacts))
 env = {**os.environ, "DESTDIR": str(stage)}
 for folder in ["build", "build-engine"]:
     subprocess.run(
-        ["cmake", "--install", str(root / folder), "--prefix", str(a.prefix)],
+        [
+            "cmake",
+            "--install",
+            str(root / folder),
+            "--prefix",
+            str(a.prefix),
+            "--component",
+            "OrcaRuntime",
+        ],
         env=env,
         check=True,
         stdout=subprocess.DEVNULL,
