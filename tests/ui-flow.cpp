@@ -125,6 +125,13 @@ int main(int argc, char **argv) {
                   {"stable_duplicate_names_filter_rescan_restore", true},
                   {"layers", app.viewport->paths->heights.size()},
                   {"gcode", output.string()}});
+  assert(app.generated_slice);
+  app.process->do_callback();
+  assert(app.gcode.empty() && !app.send->active() && !app.xr->active());
+  app.open_file(output); // explicitly opened G-code remains transferable
+  assert(!app.generated_slice && app.send->active());
+  app.process->do_callback();
+  assert(app.send->active() && app.gcode == fs::absolute(output));
   app.hide();
   std::cout << "PASS native profile selection, Orca compatibility filtering, slicing, progress and "
                "loaded toolpath preview\n";

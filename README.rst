@@ -91,6 +91,9 @@ OctoPrint or Moonraker / Klipper, enter the server base URL (including http:// o
 https://), and supply an API key when required. Reverse-proxy URL prefixes are
 supported. Choose a remote filename and optionally an existing folder relative
 to the server's G-code storage. The server may replace a file with the same name.
+Changing printer, process, filament, job overrides or STL transforms invalidates
+a generated slice and requires slicing again before transfer. Explicitly opened
+G-code remains available for upload.
 
 Uploads use the documented OctoPrint ``POST /api/files/local`` or Moonraker
 ``POST /server/files/upload`` multipart API. They store the file without starting

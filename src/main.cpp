@@ -100,7 +100,7 @@ struct Application : Fl_Double_Window {
   Fl_Box *info = nullptr;
   std::vector<const Profile *> machines, processes, filaments;
   std::vector<pid_t> previews;
-  bool failed = false;
+  bool failed = false, generated_slice = false;
   Application(fs::path resource, fs::path engine, std::vector<fs::path> directories)
       : Fl_Double_Window(1220, 820, "Orca FLTK"), resources(std::move(resource)),
         worker(std::move(engine)), roots(std::move(directories)) {
@@ -152,6 +152,7 @@ struct Application : Fl_Double_Window {
             a->guard([&] {
               a->remember_materials();
               a->save_settings();
+              a->invalidate_slice();
             });
           },
           this);
@@ -197,6 +198,12 @@ struct Application : Fl_Double_Window {
             a->output->value(f);
         },
         this);
+    for (Fl_Widget *field :
+         std::vector<Fl_Widget *>{embedded, overrides, height, infill, support}) {
+      field->when(FL_WHEN_CHANGED);
+      field->callback(
+          [](Fl_Widget *, void *p) { static_cast<Application *>(p)->invalidate_slice(); }, this);
+    }
     controls->end();
     slice = new Fl_Button(15, 640, 165, 34, "Slice and preview");
     slice->callback(
@@ -273,7 +280,7 @@ struct Application : Fl_Double_Window {
         [](Fl_Widget *, void *p) {
           auto a = static_cast<Application *>(p);
           if (!a->gcode.empty())
-            a->guard([&] { a->load_gcode(a->gcode); });
+            a->guard([&] { a->load_gcode(a->gcode, a->generated_slice); });
         },
         this);
     progress = new Fl_Progress(370, 640, 835, 25);
@@ -442,6 +449,7 @@ struct Application : Fl_Double_Window {
     if (chosen->file == active_printer && compatible_printer == active_printer)
       return;
     remember_materials();
+    invalidate_slice();
     active_printer = chosen->file;
     clear_materials();
     save_settings();
@@ -452,6 +460,7 @@ struct Application : Fl_Double_Window {
       start("catalog");
   }
   void scan() {
+    invalidate_slice();
     remember_materials();
     machine->clear();
     process->clear();
@@ -587,6 +596,7 @@ struct Application : Fl_Double_Window {
     rotation = {0, 0, 0};
     scale = 1;
     gcode.clear();
+    generated_slice = false;
     xr->deactivate();
     send->deactivate();
     viewport->paths.reset();
@@ -609,9 +619,22 @@ struct Application : Fl_Double_Window {
     } else
       start("inspect");
   }
-  void load_gcode(const fs::path &path) {
+  void invalidate_slice() {
+    if (!generated_slice)
+      return;
+    generated_slice = false;
+    gcode.clear();
+    viewport->paths.reset();
+    viewport->changed();
+    send->deactivate();
+    xr->deactivate();
+    info->copy_label("Settings changed. Slice again before transfer.");
+    log("Settings changed; slice again to update G-code");
+  }
+  void load_gcode(const fs::path &path, bool generated = false) {
     auto parsed = std::make_shared<Toolpath>(read_gcode(path));
     gcode = fs::absolute(path);
+    generated_slice = generated;
     viewport->paths = std::move(parsed);
     layer->bounds(0, viewport->paths->heights.size() - 1);
     layer->value(viewport->paths->heights.size() - 1);
@@ -673,6 +696,7 @@ struct Application : Fl_Double_Window {
     std::array<double, 3> next = {number(x.value()), number(y.value()), number(z.value())};
     double factor = number(percent.value()) / 100;
     auto transformed = std::make_shared<Mesh>(transform_mesh(*original_mesh, next, factor));
+    invalidate_slice();
     rotation = next;
     scale = factor;
     viewport->mesh = std::move(transformed);
@@ -911,7 +935,7 @@ struct Application : Fl_Double_Window {
                                       .c_str());
             }
             if (a->job_result.contains("output"))
-              a->load_gcode(a->job_result["output"].get<std::string>());
+              a->load_gcode(a->job_result["output"].get<std::string>(), true);
             if (a->job_result.contains("config"))
               a->log("Resolved configuration: " + a->job_result["config"].get<std::string>());
           });
