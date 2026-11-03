@@ -10,12 +10,15 @@ Features
 
 * STL import, orientation and uniform scale; OBJ/3MF import through Orca's reader.
 * Original vendor and user profile selection, validation and byte-preserving export.
+* Stable, literal profile menus, remembered selections per printer and cached
+  compatibility results. Filtering keeps the active printer available.
 * Canonical Orca inheritance, template includes, compatibility checks and final
   configuration assembly. User profiles can inherit installed vendor presets.
 * One-plate FFF slicing, progress/cancellation and G-code export to a new file.
 * Optional per-job layer height, infill and support overrides, without editing profiles.
 * Layer-filtered toolpath preview, relative/absolute extrusion, tool changes,
   retractions, XY arcs and travel display.
+* OctoPrint and Moonraker/Klipper network transfer, with progress and cancellation.
 * A separate side-by-side sliced-object preview for DomeD's XR realm.
 * Native BDF/PCF font appearance and FLTK file dialogs.
 
@@ -80,6 +83,32 @@ request, effective Orca configuration and worker log under
 rewritten. A custom worker can be specified with ``--worker`` or
 ``ORCA_FLTK_WORKER``; resource discovery also accepts ``ORCA_FLTK_RESOURCES``.
 
+Network transfer
+----------------
+
+After slicing or opening G-code, choose **Send G-code to printer**. Select
+OctoPrint or Moonraker / Klipper, enter the server base URL (including http:// or
+https://), and supply an API key when required. Reverse-proxy URL prefixes are
+supported. Choose a remote filename and optionally an existing folder relative
+to the server's G-code storage. The server may replace a file with the same name.
+
+Uploads use the documented OctoPrint ``POST /api/files/local`` or Moonraker
+``POST /server/files/upload`` multipart API. They store the file without starting
+a print. Use **Cancel job** to stop an active transfer; a server may retain a
+file it already received. A failed or cancelled request is not retried automatically.
+
+HTTPS verifies the certificate and hostname. For a private certificate authority,
+enter its PEM certificate file in the custom CA field. Redirects are reported as
+errors. Transfer failures report HTTP status without echoing server response bodies.
+
+Server URL, protocol, folder and CA file are remembered separately for each
+printer. API keys stay in memory for the current application session and are not
+written to settings, job requests or logs. Settings and profile selections are
+stored atomically in ``$XDG_CONFIG_HOME/orca-fltk/settings.json`` (or
+``~/.config/orca-fltk/settings.json``), with owner-only file permissions.
+Original Orca profile files remain read-only. Compatibility results are discarded
+when profile folders are rescanned. Cached results are only used for their printer.
+
 Preview
 -------
 
@@ -100,7 +129,7 @@ Current scope
 
 This is an offline, single-plate FFF application. It does not implement Orca's
 complete editing interface, multi-material painting, multi-plate slicing, printer
-network control, cloud services, calibration wizards, parametric CAD editing,
+control/monitoring, cloud services, calibration wizards, parametric CAD editing,
 text embossing or post-processing script execution. Multi-plate 3MF jobs are
 rejected rather than silently combining plates. Existing profiles are reused;
 there is no replacement profile format or automatic profile migration writer.
@@ -122,6 +151,20 @@ native FLTK UI rendering and profile-selection-to-toolpath integration::
 with synthetic XR tracking and checks native Wayland stereo eye routing. It
 requires a private session bus (``dbus-run-session``). It does not test a headset.
 Test reports and screenshots are saved under ``artifacts``.
+
+CTest also exercises both upload protocols against local HTTP/HTTPS servers,
+including exact file contents, authentication, path prefixes, TLS, cancellation,
+redirect refusal and rejected requests. To include actual slicing and both
+uploads through the FLTK application's transfer actions::
+
+    python3 tests/transfer.py build/slicer-transfer-tests \
+        dbus-run-session -- xvfb-run -a env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET \
+        FLTK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 build/slicer-ui-flow \
+        ../orca-upstream/resources build-engine/orca-fltk-worker \
+        "artifacts/engine/cube with spaces.stl" artifacts/ui-flow-network
+
+The UI flow also checks duplicate names, special characters, filtering, printer
+switches, stale compatibility results, folder rescans and saved-selection restore.
 
 Licensing
 ---------

@@ -287,6 +287,7 @@ int main(int argc, char **argv) {
                               " candidate profiles could not be resolved and were excluded"}});
       emit({{"event", "result"},
             {"compatible", compatible},
+            {"machine", fs::weakly_canonical(file).string()},
             {"defaults", defaults},
             {"engine", ORCA_PIN}});
       return 0;

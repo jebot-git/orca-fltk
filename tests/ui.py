@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exercise real FLTK windows on a private X display and session bus."""
 
-import json, pathlib, subprocess, sys, time
+import json, os, pathlib, subprocess, sys, time
 from Xlib import X, display, protocol
 from Xlib.ext import xtest
 from PIL import Image
@@ -9,6 +9,7 @@ from PIL import Image
 binary = pathlib.Path(sys.argv[1]).resolve()
 out = pathlib.Path(sys.argv[2]).resolve()
 out.mkdir(parents=True, exist_ok=True)
+os.environ["XDG_CONFIG_HOME"] = str(out / "config")
 fixture = out / "preview.gcode"
 fixture.write_text(
     "G21\nG90\nM83\n"
@@ -61,7 +62,7 @@ try:
     image.save(out / "application.png")
     # Filter printer profiles, exercising callbacks and dependent profile selections.
     for x, y in [(100, 88)]:
-        xtest.fake_input(d, X.MotionNotify, x=x, y=y)
+        xtest.fake_input(d, X.MotionNotify, x=geom.x + x, y=geom.y + y)
         xtest.fake_input(d, X.ButtonPress, detail=1)
         xtest.fake_input(d, X.ButtonRelease, detail=1)
     for key in "Creality":
@@ -72,6 +73,41 @@ try:
     d.sync()
     time.sleep(0.4)
     assert app.poll() is None
+    # Open and inspect the real upload dialog, then cancel without networking.
+    xtest.fake_input(d, X.MotionNotify, x=geom.x + 175, y=geom.y + 699)
+    xtest.fake_input(d, X.ButtonPress, detail=1)
+    xtest.fake_input(d, X.ButtonRelease, detail=1)
+    d.sync()
+    upload = None
+    for _ in range(100):
+        upload = next(
+            (
+                w
+                for w in d.screen().root.query_tree().children
+                if w.get_wm_name() == "Send sliced G-code"
+                and w.get_attributes().map_state == X.IsViewable
+            ),
+            None,
+        )
+        if upload:
+            break
+        time.sleep(0.03)
+    assert upload, "Upload dialog did not open"
+    time.sleep(0.15)
+    geom = upload.get_geometry()
+    raw = upload.get_image(0, 0, geom.width, geom.height, X.ZPixmap, 0xFFFFFFFF)
+    Image.frombytes("RGB", (geom.width, geom.height), raw.data, "raw", "BGRX").save(
+        out / "upload-dialog.png"
+    )
+    close = protocol.event.ClientMessage(
+        window=upload,
+        client_type=d.intern_atom("WM_PROTOCOLS"),
+        data=(32, [d.intern_atom("WM_DELETE_WINDOW"), X.CurrentTime, 0, 0, 0]),
+    )
+    upload.send_event(close)
+    d.flush()
+    time.sleep(0.1)
+    reports.append({"mode": "network upload dialog", "passed": True})
     event = protocol.event.ClientMessage(
         window=window,
         client_type=d.intern_atom("WM_PROTOCOLS"),
