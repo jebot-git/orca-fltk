@@ -1,0 +1,23 @@
+{
+  "orca": {
+    "repository": "https://github.com/OrcaSlicer/OrcaSlicer.git",
+    "commit": "fa5f7e3db41d5688a0c4c53cdd7fa30827859e42",
+    "version": "2.5.0-dev",
+    "license": "AGPL-3.0-or-later"
+  },
+  "domed_appearance": {
+    "repository": "https://github.com/jebot-git/DomeD.git",
+    "commit": "d271cf65c612a462fcfa6739416b06c6565be070",
+    "files": [
+      "native/fltk_appearance.h",
+      "native/bdf_font.hpp"
+    ],
+    "license": "MIT"
+  },
+  "domed_stereo_integration": {
+    "repository": "https://github.com/jebot-git/DomeD.git",
+    "commit": "2270aeab65e383e4d15b5a52a4524022d57a7b71",
+    "branch": "feat/orca-fltk-xr-preview",
+    "file": "src/stereo.rs"
+  }
+}

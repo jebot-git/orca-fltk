@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Orca FLTK
+Comment=Slice 3D models with Orca profiles and preview toolpaths
+Exec=orca-fltk %f
+TryExec=orca-fltk
+Icon=applications-engineering
+Terminal=false
+Categories=Graphics;3DGraphics;Engineering;
+MimeType=model/stl;model/3mf;model/obj;text/x-gcode;
+StartupWMClass=org.domed.OrcaSlicer

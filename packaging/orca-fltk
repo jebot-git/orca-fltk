@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+export DOME_BDF_RUNTIME_PREFIX="${DOME_BDF_RUNTIME_PREFIX:-/opt/fltk-vr/bdf-runtime}"
+export LD_LIBRARY_PATH="$DOME_BDF_RUNTIME_PREFIX/lib:/opt/fltk-vr/toolkit/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+if test -x /usr/local/libexec/domed/check-bitmap-runtime; then
+    /usr/local/libexec/domed/check-bitmap-runtime --manifest "$DOME_BDF_RUNTIME_PREFIX/share/domed-bdf-runtime/manifest.json" >/dev/null
+fi
+bindir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec "$bindir/../libexec/orca-fltk/orca-fltk" "$@"

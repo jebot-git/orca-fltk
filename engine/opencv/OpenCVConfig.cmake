@@ -1,0 +1,5 @@
+set(OpenCV_FOUND TRUE)
+set(OpenCV_VERSION "4.10.0")
+set(OpenCV_core_FOUND TRUE)
+set(OpenCV_INCLUDE_DIRS "${OpenCV_INCLUDE_DIR}")
+set(OpenCV_LIBS opencv_world)
