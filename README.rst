@@ -11,7 +11,8 @@ Features
 * STL import, orientation and uniform scale; OBJ/3MF import through Orca's reader.
 * Original vendor and user profile selection, validation and byte-preserving export.
 * Stable, literal profile menus, remembered selections per printer and cached
-  compatibility results. Filtering keeps the active printer available.
+  compatibility results. Filtering keeps the active printer available. Full catalogs
+  open in a bounded, scrollable selector with its own search field.
 * Canonical Orca inheritance, template includes, compatibility checks and final
   configuration assembly. User profiles can inherit installed vendor presets.
 * One-plate FFF slicing, progress/cancellation and G-code export to a new file.
@@ -176,3 +177,14 @@ Application and worker code are AGPL-3.0-or-later. Orca's original notices remai
 in its pinned source tree. The copied DomeD bitmap appearance helpers are MIT;
 their notices and source revision are retained in ``third_party/domed`` and
 ``sources.json``. No IotaSlicer engine code or prebuilt toolkit libraries are used.
+
+Unfiltered selector regression checks (full printer, process and filament lists)::
+
+    dbus-run-session -- xvfb-run -a env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET \
+        FLTK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 build/slicer-profile-popup \
+        /usr/local/libexec/orca-fltk/resources \
+        /usr/local/libexec/orca-fltk/orca-fltk-worker artifacts/profile-popup-x11
+    dbus-run-session -- python3 tests/profile-popup-wayland.py /usr/local/bin/dome-compositor
+
+The Wayland check uses a private nested compositor, leaving the running session
+alone. It covers the Cairo surface allocation failure from oversized native menus.

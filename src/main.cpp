@@ -2,6 +2,7 @@
 #include "fltk_appearance.h"
 #include "geometry.hpp"
 #include "job.hpp"
+#include "profile_choice.hpp"
 #include "profiles.hpp"
 #include "transfer.hpp"
 #include "viewport.hpp"
@@ -133,7 +134,7 @@ struct Application : Fl_Double_Window {
     filter->when(FL_WHEN_CHANGED);
     filter->callback(
         [](Fl_Widget *, void *p) { static_cast<Application *>(p)->refresh_machines(); }, this);
-    machine = new Fl_Choice(15, 130, 340, 30, "Printer profile");
+    machine = new ProfileChoice(15, 130, 340, 30, "Printer profile");
     machine->align(FL_ALIGN_TOP_LEFT);
     machine->callback(
         [](Fl_Widget *, void *p) {
@@ -141,9 +142,9 @@ struct Application : Fl_Double_Window {
           a->guard([&] { a->select_printer(); });
         },
         this);
-    process = new Fl_Choice(15, 192, 340, 30, "Process profile");
+    process = new ProfileChoice(15, 192, 340, 30, "Process profile");
     process->align(FL_ALIGN_TOP_LEFT);
-    filament = new Fl_Choice(15, 254, 340, 30, "Filament profile");
+    filament = new ProfileChoice(15, 254, 340, 30, "Filament profile");
     filament->align(FL_ALIGN_TOP_LEFT);
     for (auto choice : {process, filament})
       choice->callback(

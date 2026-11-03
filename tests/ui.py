@@ -60,6 +60,52 @@ try:
     raw = window.get_image(0, 0, geom.width, geom.height, X.ZPixmap, 0xFFFFFFFF)
     image = Image.frombytes("RGB", (geom.width, geom.height), raw.data, "raw", "BGRX")
     image.save(out / "application.png")
+    # Reproduce the reported action before entering any filter.
+    xtest.fake_input(d, X.MotionNotify, x=geom.x + 335, y=geom.y + 145)
+    xtest.fake_input(d, X.ButtonPress, detail=1)
+    xtest.fake_input(d, X.ButtonRelease, detail=1)
+    d.sync()
+    selector = None
+    for _ in range(100):
+        assert app.poll() is None, "Unfiltered printer selector crashed"
+        selector = next(
+            (
+                w
+                for w in d.screen().root.query_tree().children
+                if w.get_wm_name() == "Select Printer profile"
+                and w.get_attributes().map_state == X.IsViewable
+            ),
+            None,
+        )
+        if selector:
+            break
+        time.sleep(0.03)
+    assert selector, "Bounded profile selector did not open"
+    time.sleep(0.2)
+    selector_geom = selector.get_geometry()
+    assert selector_geom.width <= 1000 and selector_geom.height <= 800
+    raw = selector.get_image(
+        0, 0, selector_geom.width, selector_geom.height, X.ZPixmap, 0xFFFFFFFF
+    )
+    Image.frombytes(
+        "RGB", (selector_geom.width, selector_geom.height), raw.data, "raw", "BGRX"
+    ).save(out / "unfiltered-profile-selector.png")
+    for key in "mk3s":
+        code = d.keysym_to_keycode(ord(key))
+        xtest.fake_input(d, X.KeyPress, detail=code)
+        xtest.fake_input(d, X.KeyRelease, detail=code)
+    d.sync()
+    time.sleep(0.2)
+    close = protocol.event.ClientMessage(
+        window=selector,
+        client_type=d.intern_atom("WM_PROTOCOLS"),
+        data=(32, [d.intern_atom("WM_DELETE_WINDOW"), X.CurrentTime, 0, 0, 0]),
+    )
+    selector.send_event(close)
+    d.flush()
+    time.sleep(0.1)
+    assert app.poll() is None
+    reports.append({"mode": "unfiltered profile selector and search", "passed": True})
     # Filter printer profiles, exercising callbacks and dependent profile selections.
     for x, y in [(100, 88)]:
         xtest.fake_input(d, X.MotionNotify, x=geom.x + x, y=geom.y + y)
